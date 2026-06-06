@@ -1,34 +1,25 @@
 # ddtokens
+
 creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary
 
-Papers : 
+## Papers
 
-Neural Machine Translation of Rare Words with Subword Units (2016)
-Paper:
-https://arxiv.org/abs/1508.07909
+- Neural Machine Translation of Rare Words with Subword Units (2016)
+  - Paper: https://arxiv.org/abs/1508.07909
 
+- Language Models are Unsupervised Multitask Learners (GPT-2)
+  - Paper: https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
 
+- Training Multilingual Pre-trained Language Model with Byte-level Subwords
+  - Paper: https://arxiv.org/abs/2101.09469
 
-Language Models are Unsupervised Multitask Learners (GPT-2)
-Paper:
-https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
+## Datasets
 
+- wikipedia - https://dumps.wikimedia.org/enwiki/latest/ (downloaded)
+- stack overflow - https://archive.org/download/stackexchange (downloaded)
+- fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb - dataset : sample-10BT (streamed and stored in hashmap)
 
-Training Multilingual Pre-trained Language Model with Byte-level Subwords
-Paper:
-https://arxiv.org/abs/2101.09469
-
-
-
-datasets : 
-
-wikipedia - https://dumps.wikimedia.org/enwiki/latest/  (downloaded)
-stack overflow - https://archive.org/download/stackexchange (downloaded)
-fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb - dataset : sample-10BT (streamed and stored in hashmap)
-
-
-strategy : 
-
+## Strategy
 
 ### Data Collection
 
@@ -66,8 +57,3 @@ The trained tokenizer produces two files:
 These files fully define the tokenizer and can be loaded to encode any arbitrary text into token IDs.
 
 *NOTE* - this is the current strategy and might change as the codebase progresses
-
-
-
-
-
