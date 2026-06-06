@@ -1,3 +1,28 @@
+"""
+download_fineweb.py — Downloads the FineWeb sample-10BT dataset from HuggingFace
+
+What this file does:
+  Uses the HuggingFace datasets library to download the "sample-10BT" subset
+  of HuggingFaceFW/fineweb (~10 billion GPT-2 tokens of cleaned web text).
+  Data is cached locally as Parquet files in datasets/fineweb_cache/.
+
+Where it gets its data:
+  Streamed from HuggingFace Hub over HTTPS. Resumes automatically if interrupted.
+
+Who consumes its output:
+  The cached Parquet dataset can be streamed into the C++ tokenizer via a
+  separate Python script that reads the dataset and pipes text to stdout.
+  The C++ tokenizer then builds word frequencies from that stream.
+
+Why this file exists:
+  FineWeb provides high-quality, deduplicated web text that complements the
+  Stack Overflow and Wikipedia datasets. More diverse training data produces
+  a more robust BPE vocabulary.
+
+Prerequisites:
+  pip install datasets
+"""
+
 import os
 from datasets import load_dataset
 
