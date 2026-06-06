@@ -1,3 +1,13 @@
+# CMakeLists.txt — Build configuration for ddtokens
+#
+# What this file does:
+#   Tells CMake how to compile the project into a single executable called "tokenizer".
+#   Links main.cpp and tokenizer.cpp together, points the compiler at include/ for headers.
+#
+# Why this file exists:
+#   Standard C++ build config. Alternatively you can compile directly with:
+#   clang++ -std=c++17 -O2 -Iinclude src/main.cpp src/tokenizer.cpp -o tokenizer
+
 cmake_minimum_required(VERSION 3.10)
 project(ddtokens)
 
