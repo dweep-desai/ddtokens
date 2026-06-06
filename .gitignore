@@ -9,6 +9,9 @@ lib/
 *.dll
 *.exe
 
+# Compiled binary (no extension on macOS/Linux)
+/tokenizer
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
@@ -16,13 +19,13 @@ cmake_install.cmake
 Makefile
 *.cmake
 
-# Python scripts and envs
+# Python
 __pycache__/
 *.pyc
 venv/
 .venv/
 
-# Datasets
+# Datasets (100GB+ raw data, never commit)
 datasets/
 
 # IDEs and OS
