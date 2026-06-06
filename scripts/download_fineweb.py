@@ -2,8 +2,6 @@ import os
 from datasets import load_dataset
 
 def main():
-    print("Downloading HuggingFaceFW/fineweb sample-10BT...")
-    
     # Save it in the datasets folder at the root of the project
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cache_dir = os.path.join(base_dir, "datasets", "fineweb_cache")
