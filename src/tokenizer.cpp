@@ -1,39 +1,236 @@
+/*
+ * tokenizer.cpp — Core BPE engine implementation
+ *
+ * What this file does:
+ *   Implements the full byte-level BPE training pipeline in two phases:
+ *
+ *   Phase 1 (build_word_frequencies):
+ *     Streams cleaned text files line-by-line and builds a hashmap of
+ *     word → corpus frequency. Whitespace is treated as a leading byte
+ *     of the subsequent word (" hello" vs "hello") to match GPT-2/tiktoken
+ *     conventions. This is the only phase that touches disk.
+ *
+ *   Phase 2 (train):
+ *     Decomposes each unique word into its raw bytes, then iteratively
+ *     finds the most frequent adjacent byte pair across all words (weighted
+ *     by word frequency), merges that pair, and records the merge rule.
+ *     Runs entirely in-memory — no file access after phase 1.
+ *
+ * Where it gets its data:
+ *   Cleaned text files produced by scripts/clean_stackoverflow.py and
+ *   scripts/clean_wikipedia.py, passed in as istream references from main.cpp.
+ *
+ * Who consumes its output:
+ *   save() writes two files: merges.ddtok (ordered merge rules) and
+ *   vocab.ddtok (full token-to-id mapping). These files define the
+ *   learned tokenizer and can be loaded later for encoding/decoding text.
+ *
+ * Why this file exists:
+ *   Keeps the BPE algorithm isolated from the CLI logic in main.cpp.
+ *   The tokenizer class is self-contained and testable independently.
+ */
+
 #include "../include/tokenizer.h"
+#include <algorithm>
 #include <cctype>
+#include <iomanip>
+#include <sstream>
 
 using namespace std;
 
-void BPETokenizer::train_from_stream(istream& in_stream) {
+// --- First Pass: Streaming Word Frequency Builder ---
+
+void BPETokenizer::build_word_frequencies(istream& input) {
     string line;
-    
-    while (getline(in_stream, line)) {
-        string current_word;
-        // Pre-allocate to minimize reallocations
-        current_word.reserve(line.size());
-        
+    size_t lines_read = 0;
+
+    while (getline(input, line)) {
+        string word;
+        word.reserve(64);
+
         for (char c : line) {
             if (isspace(c)) {
-                if (!current_word.empty()) {
-                    word_counts[current_word]++;
-                    current_word.clear();
+                if (!word.empty()) {
+                    word_freqs[word]++;
+                    word.clear();
                 }
-                // Prepend space to the subsequent word token, 
-                // aligning with standard byte-level BPE behavior.
-                current_word += c;
+                // Leading space becomes part of the next word.
+                // This is how GPT-2/tiktoken handle word boundaries —
+                // " hello" and "hello" are distinct vocabulary entries.
+                word += c;
             } else {
-                current_word += c;
+                word += c;
             }
         }
-        
-        if (!current_word.empty()) {
-            word_counts[current_word]++;
+
+        if (!word.empty()) {
+            word_freqs[word]++;
         }
-        
-        // Account for dropped newline from getline
-        word_counts["\n"]++;
+
+        // getline strips \n, but it's a real byte in the corpus
+        word_freqs["\n"]++;
+        lines_read++;
+
+        if (lines_read % 5000000 == 0) {
+            cout << "  ingested " << lines_read / 1000000 << "M lines | "
+                 << word_freqs.size() << " unique words\n";
+        }
+    }
+
+    cout << "  finished: " << lines_read << " lines, "
+         << word_freqs.size() << " unique words\n";
+}
+
+// --- BPE Training (runs entirely in-memory) ---
+
+void BPETokenizer::train(size_t num_merges) {
+    // Initialize word_splits: decompose each word into individual bytes.
+    // This only happens once — subsequent merges mutate these vectors in place.
+    if (word_splits.empty()) {
+        word_splits.reserve(word_freqs.size());
+        for (const auto& [word, freq] : word_freqs) {
+            vector<string> bytes;
+            bytes.reserve(word.size());
+            for (unsigned char c : word) {
+                bytes.emplace_back(1, static_cast<char>(c));
+            }
+            word_splits[word] = move(bytes);
+        }
+    }
+
+    cout << "Starting BPE: " << word_freqs.size() << " unique words, "
+         << num_merges << " target merges\n";
+
+    for (size_t step = 0; step < num_merges; step++) {
+        PairCounts pair_counts = count_pairs();
+
+        if (pair_counts.empty()) {
+            cout << "No mergeable pairs remain at step " << step << "\n";
+            break;
+        }
+
+        // Linear scan for max — fine for typical vocab sizes.
+        // A priority queue would help if pair_counts is huge,
+        // but the bottleneck is count_pairs(), not this scan.
+        TokenPair best;
+        size_t best_count = 0;
+        for (const auto& [pair, count] : pair_counts) {
+            if (count > best_count) {
+                best_count = count;
+                best = pair;
+            }
+        }
+
+        merges.push_back(best);
+        apply_merge(best.first, best.second);
+
+        // Log periodically + first merge for sanity check
+        if (step == 0 || (step + 1) % 500 == 0) {
+            cout << "  merge " << (step + 1) << "/" << num_merges
+                 << ": \"" << best.first << "\" + \"" << best.second
+                 << "\" (count=" << best_count << ")\n";
+        }
+    }
+
+    cout << "Training complete. Final vocab size: "
+         << BASE_VOCAB_SIZE + merges.size() << "\n";
+}
+
+PairCounts BPETokenizer::count_pairs() const {
+    PairCounts counts;
+
+    for (const auto& [word, split] : word_splits) {
+        if (split.size() < 2) continue;
+
+        size_t freq = word_freqs.at(word);
+        for (size_t i = 0; i + 1 < split.size(); i++) {
+            counts[{split[i], split[i + 1]}] += freq;
+        }
+    }
+
+    return counts;
+}
+
+void BPETokenizer::apply_merge(const string& a, const string& b) {
+    string merged = a + b;
+
+    for (auto& [word, split] : word_splits) {
+        if (split.size() < 2) continue;
+
+        vector<string> new_split;
+        new_split.reserve(split.size());
+
+        size_t i = 0;
+        while (i < split.size()) {
+            if (i + 1 < split.size() && split[i] == a && split[i + 1] == b) {
+                new_split.push_back(merged);
+                i += 2;
+            } else {
+                new_split.push_back(move(split[i]));
+                i++;
+            }
+        }
+
+        split = move(new_split);
     }
 }
 
-const unordered_map<string, size_t>& BPETokenizer::get_word_counts() const {
-    return word_counts;
+// --- Output ---
+
+// Escape a raw token string into a printable representation.
+// Nonprintable bytes become \xHH, backslash becomes \\.
+static string escape_token(const string& token) {
+    ostringstream oss;
+    for (unsigned char c : token) {
+        if (c == '\\') {
+            oss << "\\\\";
+        } else if (c == '\n') {
+            oss << "\\n";
+        } else if (c == '\t') {
+            oss << "\\t";
+        } else if (c >= 0x20 && c < 0x7F) {
+            oss << static_cast<char>(c);
+        } else {
+            oss << "\\x" << hex << setfill('0') << setw(2) << (int)c;
+        }
+    }
+    return oss.str();
+}
+
+void BPETokenizer::save(const string& merges_path, const string& vocab_path) const {
+    // Write merge rules (ordered — order matters for deterministic tokenization)
+    {
+        ofstream f(merges_path);
+        f << "# ddtokens merge rules\n";
+        f << "# total merges: " << merges.size() << "\n";
+        for (const auto& [a, b] : merges) {
+            f << escape_token(a) << "\t" << escape_token(b) << "\n";
+        }
+        cout << "Merge rules written to " << merges_path << "\n";
+    }
+
+    // Write full vocabulary: 256 base bytes + all merged tokens
+    {
+        ofstream f(vocab_path);
+        size_t id = 0;
+
+        // Base vocabulary: all 256 single-byte tokens
+        for (int b = 0; b < 256; b++) {
+            string token(1, static_cast<char>(b));
+            f << id++ << "\t" << escape_token(token) << "\n";
+        }
+
+        // Merged tokens in order of creation
+        for (const auto& [a, b] : merges) {
+            f << id++ << "\t" << escape_token(a + b) << "\n";
+        }
+
+        cout << "Vocabulary (" << id << " tokens) written to " << vocab_path << "\n";
+    }
+}
+
+void BPETokenizer::print_stats() const {
+    cout << "Word frequencies: " << word_freqs.size() << " unique words\n";
+    cout << "Merges learned: " << merges.size() << "\n";
+    cout << "Current vocab size: " << BASE_VOCAB_SIZE + merges.size() << "\n";
 }
