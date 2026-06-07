@@ -31,7 +31,6 @@
  */
 
 #include "../include/tokenizer.h"
-#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <sstream>
@@ -94,7 +93,7 @@ void BPETokenizer::train(size_t num_merges) {
             for (unsigned char c : word) {
                 bytes.emplace_back(1, static_cast<char>(c));
             }
-            word_splits[word] = move(bytes);
+            word_splits[word] = std::move(bytes);
         }
     }
 
@@ -166,12 +165,12 @@ void BPETokenizer::apply_merge(const string& a, const string& b) {
                 new_split.push_back(merged);
                 i += 2;
             } else {
-                new_split.push_back(move(split[i]));
+                new_split.push_back(std::move(split[i]));
                 i++;
             }
         }
 
-        split = move(new_split);
+        split = std::move(new_split);
     }
 }
 
@@ -233,4 +232,57 @@ void BPETokenizer::print_stats() const {
     cout << "Word frequencies: " << word_freqs.size() << " unique words\n";
     cout << "Merges learned: " << merges.size() << "\n";
     cout << "Current vocab size: " << BASE_VOCAB_SIZE + merges.size() << "\n";
+}
+
+// --- Word Frequency Serialization ---
+
+void BPETokenizer::save_word_freqs(const string& path) const {
+    ofstream f(path, ios::binary);
+    if (!f.is_open()) {
+        cerr << "Error: could not open " << path << " for writing\n";
+        return;
+    }
+
+    uint64_t count = word_freqs.size();
+    f.write(reinterpret_cast<const char*>(&count), sizeof(count));
+
+    for (const auto& [word, freq] : word_freqs) {
+        uint64_t len = word.size();
+        uint64_t freq_val = freq;
+        f.write(reinterpret_cast<const char*>(&len), sizeof(len));
+        f.write(word.data(), len);
+        f.write(reinterpret_cast<const char*>(&freq_val), sizeof(freq_val));
+    }
+
+    cout << "Word frequencies (" << count << " entries) saved to " << path << "\n";
+}
+
+void BPETokenizer::load_word_freqs(const string& path) {
+    ifstream f(path, ios::binary);
+    if (!f.is_open()) {
+        cerr << "Error: could not open " << path << " for reading\n";
+        return;
+    }
+
+    word_freqs.clear();
+
+    uint64_t count = 0;
+    f.read(reinterpret_cast<char*>(&count), sizeof(count));
+
+    word_freqs.reserve(count);
+
+    for (uint64_t i = 0; i < count; i++) {
+        uint64_t len = 0;
+        f.read(reinterpret_cast<char*>(&len), sizeof(len));
+
+        string word(len, '\0');
+        f.read(word.data(), len);
+
+        uint64_t freq = 0;
+        f.read(reinterpret_cast<char*>(&freq), sizeof(freq));
+
+        word_freqs[std::move(word)] = freq;
+    }
+
+    cout << "Loaded " << word_freqs.size() << " word frequencies from " << path << "\n";
 }
