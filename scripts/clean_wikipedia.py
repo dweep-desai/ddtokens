@@ -1,140 +1,77 @@
-import xml.etree.ElementTree as ET
-import re
+"""
+reclean_wikipedia.py — Applies additional cleaning to already extracted Wikipedia text
+
+What this file does:
+  Reads the existing `wikipedia_clean.txt`, applies new cleaning rules
+  (removing leading bullets/dashes/stars, handling excessive pipes),
+  and writes the cleaned content to a temporary file before replacing
+  the original.
+
+Why this file exists:
+  The original raw XML is no longer available, so we must clean the
+  already extracted text directly to fix excessive pipes and bullets.
+"""
+
 import os
+import re
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-INPUT_PATH = os.path.join(PROJECT_ROOT, "datasets", "enwiki-latest-pages-articles-multistream.xml")
-OUTPUT_PATH = os.path.join(PROJECT_ROOT, "datasets", "wikipedia_clean.txt")
-
-# MediaWiki XML namespace
-NS = "{http://www.mediawiki.org/xml/export-0.11/}"
-
-# Precompiled regexes for wiki markup stripping
-REF_RE = re.compile(r"<ref[^>]*>.*?</ref>", re.DOTALL)
-REF_SELF_RE = re.compile(r"<ref[^/]*/\s*>")
-COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-HTML_TAG_RE = re.compile(r"<[^>]+>")
-TABLE_RE = re.compile(r"\{\|.*?\|\}", re.DOTALL)
-TEMPLATE_RE = re.compile(r"\{\{[^{}]*\}\}")
-FILE_RE = re.compile(r"\[\[(File|Image|Category):[^\]]*\]\]", re.IGNORECASE)
-PIPED_LINK_RE = re.compile(r"\[\[[^|\]]*\|([^\]]*)\]\]")
-PLAIN_LINK_RE = re.compile(r"\[\[([^\]]*)\]\]")
-EXT_LINK_LABEL_RE = re.compile(r"\[https?://\S+\s+([^\]]+)\]")
-EXT_LINK_BARE_RE = re.compile(r"\[https?://\S+\]")
-HEADING_RE = re.compile(r"^=+\s*(.*?)\s*=+$", re.MULTILINE)
-BOLD_ITALIC_RE = re.compile(r"'{2,5}")
-WHITESPACE_COLLAPSE_RE = re.compile(r"\n{3,}")
-
-def strip_wiki_markup(text):
-    """Best-effort conversion of wikitext to plain text."""
-    # Remove references
-    text = REF_RE.sub("", text)
-    text = REF_SELF_RE.sub("", text)
-
-    # Remove HTML comments
-    text = COMMENT_RE.sub("", text)
-
-    # Remove tables
-    text = TABLE_RE.sub("", text)
-
-    # Iteratively remove nested templates (handles up to ~5 levels deep)
-    for _ in range(5):
-        new_text = TEMPLATE_RE.sub("", text)
-        if new_text == text:
-            break
-        text = new_text
-
-    # Remove file/image/category links
-    text = FILE_RE.sub("", text)
-
-    # Convert piped links [[target|display]] -> display
-    text = PIPED_LINK_RE.sub(r"\1", text)
-
-    # Convert plain links [[target]] -> target
-    text = PLAIN_LINK_RE.sub(r"\1", text)
-
-    # External links [http://... label] -> label
-    text = EXT_LINK_LABEL_RE.sub(r"\1", text)
-    text = EXT_LINK_BARE_RE.sub("", text)
-
-    # Strip remaining HTML tags
-    text = HTML_TAG_RE.sub("", text)
-
-    # Headings: == Foo == -> Foo
-    text = HEADING_RE.sub(r"\1", text)
-
-    # Bold/italic markers
-    text = BOLD_ITALIC_RE.sub("", text)
-
-    # Collapse excessive newlines
-    text = WHITESPACE_COLLAPSE_RE.sub("\n\n", text)
-
-    return text.strip()
-
-# Sections that are boilerplate, not useful prose
-SKIP_SECTIONS = {
-    "see also", "references", "external links", "further reading",
-    "notes", "bibliography", "sources", "citations"
-}
-
-def should_skip_page(title, ns, text):
-    """Filter out non-article pages and stubs."""
-    if ns != "0":
-        return True
-    if text is None:
-        return True
-    # Redirect pages
-    if text.strip().upper().startswith("#REDIRECT"):
-        return True
-    # Disambiguation pages
-    if "{{disambiguation}}" in text.lower():
-        return True
-    # Very short articles are noise
-    if len(text) < 200:
-        return True
-    return False
+INPUT_PATH = os.path.join(PROJECT_ROOT, "datasets", "wikipedia_clean.txt")
+OUTPUT_PATH = os.path.join(PROJECT_ROOT, "datasets", "wikipedia_clean_temp.txt")
 
 def main():
+    if not os.path.exists(INPUT_PATH):
+        print(f"Error: {INPUT_PATH} not found.")
+        return
+
+    print(f"Recleaning Wikipedia text...")
+    print(f"  Input:  {INPUT_PATH}")
+    print(f"  Output: {OUTPUT_PATH}")
+
     start = time.time()
-    page_count = 0
-    written = 0
+    total_lines = 0
+    
+    # Pre-compile regex for performance
+    # Remove all special characters (punctuation, bullets, etc.) at the start of a line
+    START_SPECIAL_RE = re.compile(r"^[ \t]*([^\w\s]+[ \t]*)+")
+    # Collapse 4+ repeated special characters to 3 and surround with spaces
+    REPEAT_RE = re.compile(r"([^\w\s])\1{3,}")
 
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as out:
-        context = ET.iterparse(INPUT_PATH, events=("end",))
-
-        title = None
-        ns = None
-
-        for event, elem in context:
-            tag = elem.tag
-
-            if tag == f"{NS}title":
-                title = elem.text or ""
-            elif tag == f"{NS}ns":
-                ns = elem.text or ""
-            elif tag == f"{NS}text":
-                raw = elem.text or ""
-
-                if not should_skip_page(title, ns, raw):
-                    clean = strip_wiki_markup(raw)
-                    if len(clean) > 100:
-                        out.write(f"{title}\n{clean}\n\n")
-                        written += 1
-            elif tag == f"{NS}page":
-                page_count += 1
-                title = None
-                ns = None
-                # Free entire page subtree from memory
-                elem.clear()
-
-                if page_count % 100_000 == 0:
-                    elapsed = time.time() - start
-                    print(f"  processed {page_count:,} pages | wrote {written:,} | {elapsed:.0f}s", flush=True)
+    with open(INPUT_PATH, "r", encoding="utf-8") as inp, \
+         open(OUTPUT_PATH, "w", encoding="utf-8") as out:
+         
+        for line in inp:
+            total_lines += 1
+            
+            # Remove leading special characters
+            line = START_SPECIAL_RE.sub("", line)
+            
+            # Collapse 4+ repeated special characters to 3 and surround with spaces
+            line = REPEAT_RE.sub(r" \1\1\1 ", line)
+            
+            # Handle excessive pipes
+            if "|" in line:
+                parts = line.split("|")
+                if len(parts) > 3:
+                    # Keep first two pipes, space pad the rest
+                    line = parts[0] + " | " + parts[1] + " | " + " ".join(parts[2:])
+                else:
+                    line = line.replace("|", " | ")
+                    
+            out.write(line)
+            
+            if total_lines % 10_000_000 == 0:
+                elapsed = time.time() - start
+                print(f"  processed {total_lines:,} lines | {elapsed:.0f}s", flush=True)
 
     elapsed = time.time() - start
-    print(f"Done. {page_count:,} pages processed, {written:,} written to {OUTPUT_PATH} in {elapsed:.0f}s")
+    print(f"Done in {elapsed:.0f}s. Replacing old file...")
+    
+    # Replace original file with the newly cleaned file
+    os.replace(OUTPUT_PATH, INPUT_PATH)
+    print("Recleaning finished successfully.")
 
 if __name__ == "__main__":
     main()
