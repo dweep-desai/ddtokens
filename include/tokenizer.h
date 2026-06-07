@@ -68,6 +68,14 @@ public:
 
     void print_stats() const;
 
+    // Serialize word frequency hashmap to a binary .ddfreq file.
+    // Format: [count][len1][word1][freq1][len2][word2][freq2]...
+    void save_word_freqs(const string& path) const;
+
+    // Load word frequency hashmap from a binary .ddfreq file.
+    // Replaces any existing word_freqs data.
+    void load_word_freqs(const string& path);
+
 private:
     // word -> corpus frequency (survives entire lifetime, never mutated after ingestion)
     unordered_map<string, size_t> word_freqs;
