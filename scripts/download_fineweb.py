@@ -1,46 +1,105 @@
 """
-download_fineweb.py — Downloads the FineWeb sample-10BT dataset from HuggingFace
+download_fineweb.py — Downloads a subset of FineWeb 10BT as plain text
 
 What this file does:
-  Uses the HuggingFace datasets library to download the "sample-10BT" subset
-  of HuggingFaceFW/fineweb (~10 billion GPT-2 tokens of cleaned web text).
-  Data is cached locally as Parquet files in datasets/fineweb_cache/.
+  Streams FineWeb sample-10BT from HuggingFace Hub and saves each document's
+  text content to a plain text file. Uses streaming mode so the full dataset
+  never needs to fit in memory.
 
 Where it gets its data:
-  Streamed from HuggingFace Hub over HTTPS. Resumes automatically if interrupted.
+  HuggingFaceFW/fineweb sample-10BT subset via the datasets library.
 
 Who consumes its output:
-  The cached Parquet dataset can be streamed into the C++ tokenizer via a
-  separate Python script that reads the dataset and pipes text to stdout.
-  The C++ tokenizer then builds word frequencies from that stream.
+  clean_fineweb.py processes the raw text into a cleaned version suitable
+  for BPE training via build_freqs.
 
 Why this file exists:
-  FineWeb provides high-quality, deduplicated web text that complements the
-  Stack Overflow and Wikipedia datasets. More diverse training data produces
-  a more robust BPE vocabulary.
+  Downloads a manageable subset of FineWeb as plain text, avoiding the need
+  to stream from HuggingFace every time we want to rebuild frequencies.
+  Having local files also enables offline iteration.
 
 Prerequisites:
   pip install datasets
+
+Usage:
+  python scripts/download_fineweb.py                   # default 2M docs
+  python scripts/download_fineweb.py --max-docs 500000 # custom limit
 """
 
 import os
+import sys
+import time
+import argparse
 from datasets import load_dataset
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+OUTPUT_PATH = os.path.join(PROJECT_ROOT, "datasets", "fineweb_raw.txt")
+
+
 def main():
-    # Save it in the datasets folder at the root of the project
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cache_dir = os.path.join(base_dir, "datasets", "fineweb_cache")
-    
-    # Load the dataset (sample-10BT)
-    dataset = load_dataset(
-        "HuggingFaceFW/fineweb", 
-        name="sample-10BT", 
-        split="train", 
-        cache_dir=cache_dir
+    parser = argparse.ArgumentParser(description="Download FineWeb subset as plain text")
+    parser.add_argument(
+        "--max-docs", type=int, default=2_000_000,
+        help="Maximum number of documents to download (default: 2,000,000)"
     )
-    
-    print(f"Dataset downloaded successfully to {cache_dir}")
-    print(dataset)
+    args = parser.parse_args()
+
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+
+    print(f"Downloading FineWeb sample-10BT ({args.max_docs:,} docs max)")
+    print(f"Output: {OUTPUT_PATH}")
+    print()
+
+    dataset = load_dataset(
+        "HuggingFaceFW/fineweb",
+        name="sample-10BT",
+        split="train",
+        streaming=True,
+    )
+
+    start = time.time()
+    count = 0
+    total_bytes = 0
+
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as out:
+        for example in dataset:
+            text = example.get("text", "")
+            if not text or len(text.strip()) < 50:
+                continue
+
+            out.write(text.rstrip())
+            out.write("\n\n")  # double newline separates documents
+
+            count += 1
+            total_bytes += len(text)
+
+            if count % 50_000 == 0:
+                elapsed = time.time() - start
+                gb = total_bytes / (1024 ** 3)
+                rate = count / elapsed if elapsed > 0 else 0
+                eta_min = (args.max_docs - count) / rate / 60 if rate > 0 else 0
+                print(
+                    f"  {count:>10,} docs | {gb:.2f} GB | "
+                    f"{rate:.0f} docs/s | ETA {eta_min:.0f} min",
+                    flush=True,
+                )
+
+            if count >= args.max_docs:
+                break
+
+    elapsed = time.time() - start
+    gb = total_bytes / (1024 ** 3)
+    file_gb = os.path.getsize(OUTPUT_PATH) / (1024 ** 3)
+
+    print()
+    print(f"Done. {count:,} documents downloaded in {elapsed/60:.1f} min")
+    print(f"  Content: {gb:.2f} GB")
+    print(f"  File on disk: {file_gb:.2f} GB")
+    print(f"  Saved to: {OUTPUT_PATH}")
+    print()
+    print("Next step: python scripts/clean_fineweb.py")
+
 
 if __name__ == "__main__":
     main()
