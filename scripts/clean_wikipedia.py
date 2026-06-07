@@ -34,8 +34,8 @@ def main():
     total_lines = 0
     
     # Pre-compile regex for performance
-    # Remove all special characters (punctuation, bullets, etc.) at the start of a line
-    START_SPECIAL_RE = re.compile(r"^[ \t]*([^\w\s]+[ \t]*)+")
+    # Remove all special characters (punctuation, bullets, etc.) and spaces at the start of a line
+    START_SPECIAL_RE = re.compile(r"^[\W]+")
     # Collapse 4+ repeated special characters to 3 and surround with spaces
     REPEAT_RE = re.compile(r"([^\w\s])\1{3,}")
 

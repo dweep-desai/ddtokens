@@ -66,8 +66,9 @@ JUNK_LINE_RE = re.compile(r"^[^a-zA-Z]*$")
 
 def clean_line(line: str) -> str:
     """Clean a single line of text."""
-    # Remove all special characters (punctuation, bullets, etc.) at the start of a line
-    line = re.sub(r"^[ \t]*([^\w\s]+[ \t]*)+", "", line)
+    # Remove all special characters (punctuation, bullets, etc.) and spaces at the start of a line
+    # ^[\W]+ matches any sequence of non-word characters (spaces, punctuation) at the start
+    line = re.sub(r"^[\W]+", "", line)
 
     # Replace URLs and emails with nothing (they just inflate unique word count)
     line = URL_RE.sub("", line)
