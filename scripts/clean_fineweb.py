@@ -162,9 +162,15 @@ def main():
 
         for line in inp:
             total_input_bytes += len(line.encode("utf-8"))
+            
+            # Skip insanely long lines (likely minified JS, base64, or corrupted text)
+            # This prevents regex hangs on megabyte-long strings
+            if len(line) > 100000:
+                continue
 
-            # Documents are separated by double newlines
-            if line.strip() == "" and current_doc and current_doc[-1] == "":
+            # Documents are separated by double newlines, but we also cap buffer size 
+            # to prevent memory blowup on massive documents without double newlines.
+            if (line.strip() == "" and current_doc and current_doc[-1] == "") or len(current_doc) > 5000:
                 # End of document — process it
                 doc_text = "\n".join(current_doc)
                 doc_count += 1
