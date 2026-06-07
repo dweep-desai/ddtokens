@@ -17,7 +17,7 @@ creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_ba
 
 - wikipedia - https://dumps.wikimedia.org/enwiki/latest/ (downloaded)
 - stack overflow - https://archive.org/download/stackexchange (downloaded)
-- fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb - dataset : sample-10BT (streamed and stored in hashmap)
+- fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb - dataset : sample-10BT (downloaded, 17.5M documents for local processing)
 
 ## Strategy
 
@@ -31,6 +31,15 @@ We train on three diverse, large-scale text corpora to build a general-purpose v
 ### Data Cleaning
 
 Raw dumps contain XML tags, HTML entities, MediaWiki markup, and metadata that would pollute the vocabulary. Each dataset goes through a dedicated cleaning pipeline (Python scripts using streaming XML parsers) that strips all markup and outputs plain UTF-8 text files. Only actual human-written content is retained.
+
+### Dataset Cleaning Strategy
+
+To prevent unique word inflation and hashmap memory bloat (which can easily exceed RAM limits on raw web data), the text goes through aggressive filtering before frequency building:
+- Leading special characters: All punctuation, bullets, dashes, or symbols at the start of a line are stripped.
+- Junk sequences: Hexadecimal blobs, base64 data, URLs, and email addresses are entirely removed.
+- Repeating characters: Any special character repeated 4 or more times (e.g., long dashes) is collapsed to exactly 3 repetitions and padded with spaces to separate it from surrounding words.
+- Pipe limits: Files with excessive pipe characters (like broken markdown tables) have all but the first two pipes replaced with spaces, preserving the pipe token without creating massive concatenated words.
+- Normalization: Unicode whitespace is normalized to standard ASCII spaces, and multiple spaces are collapsed into one.
 
 ### Training Architecture
 
