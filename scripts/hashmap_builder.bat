@@ -71,13 +71,12 @@ if %FILE_COUNT% gtr 0 (
 )
 echo.
 
-REM --- Step 3: Stream FineWeb + ingest local files ---
-echo [3/3] Building hashmap (local files + FineWeb stream)...
+REM --- Step 3: Build hashmap from local files ---
+echo [3/3] Building hashmap...
 echo   Output: %OUTPUT_FILE%
 echo.
 
-REM Pipe FineWeb through stdin, pass local files as args, "-" reads the pipe.
-python "%SCRIPT_DIR%stream_fineweb.py" | "!EXE!" "%OUTPUT_FILE%" !LOCAL_FILES! -
+"!EXE!" "%OUTPUT_FILE%" !LOCAL_FILES!
 
 echo.
 echo ==========================================

@@ -53,14 +53,12 @@ else
 fi
 echo ""
 
-# --- Step 3: Stream FineWeb + ingest local files ---
-echo "[3/3] Building hashmap (local files + FineWeb stream)..."
+# --- Step 3: Build hashmap from local files ---
+echo "[3/3] Building hashmap..."
 echo "  Output: $OUTPUT_FILE"
 echo ""
 
-# Pipe FineWeb through stdin, pass local files as args, "-" reads the pipe.
-python3 "$SCRIPT_DIR/stream_fineweb.py" \
-    | "$BUILD_FREQS" "$OUTPUT_FILE" "${LOCAL_FILES[@]}" -
+"$BUILD_FREQS" "$OUTPUT_FILE" "${LOCAL_FILES[@]}"
 
 echo ""
 echo "=========================================="
