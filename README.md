@@ -1,6 +1,6 @@
 # ddtokens
 
-creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary
+creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary. (Note : did not include code in dataset due to massive unique word hashmap entries blow up - this project only deals with general text.)
 
 ## Papers
 
@@ -15,18 +15,26 @@ creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_ba
 
 ## Datasets
 
-- wikipedia - https://dumps.wikimedia.org/enwiki/latest/ (downloaded)
-- stack overflow - https://archive.org/download/stackexchange (downloaded)
-- fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb - dataset : sample-10BT (downloaded, 17.5M documents for local processing)
+- wikipedia - https://dumps.wikimedia.org/enwiki/latest/
+- stack overflow - https://archive.org/download/stackexchange (Did not use due to RAM limitations - while building the hashmap, it had started to reach 25gb of RAM storage on a 16 gb machine- The hashmap builder was then starting to run exponentially slower due to the extensive use of swap files)
+- fineweb - https://huggingface.co/datasets/HuggingFaceFW/fineweb (sample-10BT)
+
+**Uncompressed and uncleaned data:**
+- wikipedia : 115 GB
+- fineweb-sample-10BT : 43 GB
+
+**Cleaned data:**
+- wikipedia : 18 GB
+- fineweb : 42.75 GB
 
 ## Strategy
 
 ### Data Collection
 
 We train on three diverse, large-scale text corpora to build a general-purpose vocabulary:
-- **Stack Overflow** (~104 GB XML dump) — covers programming languages, technical jargon, code snippets, and developer Q&A
+- **Stack Overflow** (~104 GB XML dump) — covers programming languages, technical jargon, code snippets, and developer Q&A (Can be used for the dataset but not used in my final training data due to physical system limitations)
 - **English Wikipedia** (~116 GB XML dump) — covers formal prose, scientific terminology, historical text, and multilingual proper nouns
-- **FineWeb sample-10BT** (~10 billion tokens from HuggingFace) — covers general web text, informal writing, and conversational language
+- **FineWeb sample-10BT** (sample of 43 GB (10 Billion tokens) from the 800 GB (10 Trillion tokens) dataset) — covers general web text, informal writing, and conversational language
 
 ### Data Cleaning
 
