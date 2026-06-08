@@ -33,3 +33,7 @@ datasets/
 .idea/
 .DS_Store
 .cache/
+
+# Large output files
+word_freqs.ddfreq
+*.ddfreq
