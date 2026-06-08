@@ -1,6 +1,6 @@
 # ddtokens
 
-creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary using an optimised fast heap-based approach (introduced in 2023) to run BPE algorithm training significantly faster (about 100x) than the naive loop-through approach.
+A custom tokenizer (byte level BPE) trained by me to try to replicate LLAMA 2's massive token vocabulary using an optimised fast heap-based approach (introduced in 2023) to run BPE algorithm training significantly faster (about 100x) than the naive loop-through approach.
 
 avoid the detailed read - check out merges.ddtok and vocab.ddtok to see the generated vocabulary and merging rules
 
