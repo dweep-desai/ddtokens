@@ -12,9 +12,9 @@
  *   Operates entirely in-memory using the word_freqs loaded into the BPETokenizer object.
  *
  * Who consumes its output:
- *   train_bpe_heap.cpp calls train_heap() and then saves the resulting merges and vocab.
+ *   train_bpe_heap.cpp calls train() and then saves the resulting merges and vocab.
  */
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_heap.h"
 #include <queue>
 #include <chrono>
 
@@ -25,7 +25,7 @@ struct WordData {
     vector<string> split;
 };
 
-void BPETokenizer::train_heap(size_t num_merges) {
+void BPETokenizerHeap::train(size_t num_merges) {
     cout << "Starting heap BPE training...\n";
     auto start_time = chrono::high_resolution_clock::now();
 

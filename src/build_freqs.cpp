@@ -35,7 +35,7 @@
 
 #include <iostream>
 #include <fstream>
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_base.h"
 
 using namespace std;
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     }
 
     string output_path = argv[1];
-    BPETokenizer tokenizer;
+    BPETokenizerBase tokenizer;
 
     // Process each source in order — frequencies accumulate across all inputs.
     for (int i = 2; i < argc; i++) {

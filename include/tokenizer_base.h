@@ -50,10 +50,12 @@ struct PairHash {
 
 using PairCounts = unordered_map<TokenPair, size_t, PairHash>;
 
-class BPETokenizer {
+class BPETokenizerBase {
 public:
     // 256 raw byte values form the base vocabulary before any merges
     static constexpr size_t BASE_VOCAB_SIZE = 256;
+
+    virtual ~BPETokenizerBase() = default;
 
     // Ingest text from a stream and accumulate word frequencies.
     // Safe to call multiple times across different files — counts accumulate.
@@ -61,10 +63,7 @@ public:
 
     // Run `num_merges` BPE iterations on the accumulated word data.
     // After this, merges + BASE_VOCAB_SIZE = total vocab size.
-    void train(size_t num_merges);
-
-    // Optimized $O(N \log N)$ implementation of BPE using priority queue and reverse index
-    void train_heap(size_t num_merges);
+    virtual void train(size_t num_merges) {}
 
     // Persist merge rules and final vocabulary to disk.
     void save(const string& merges_path, const string& vocab_path) const;
@@ -82,7 +81,7 @@ public:
     // Prune words with frequency less than min_freq
     void prune_word_freqs(size_t min_freq);
 
-private:
+protected:
     // word -> corpus frequency (survives entire lifetime, never mutated after ingestion)
     unordered_map<string, size_t> word_freqs;
 
@@ -92,10 +91,4 @@ private:
 
     // Ordered merge history — this IS the learned tokenizer
     vector<TokenPair> merges;
-
-    // Walk every word's token list, count adjacent pairs weighted by word frequency
-    PairCounts count_pairs() const;
-
-    // Replace all (a, b) adjacencies with (a+b) across every word split
-    void apply_merge(const string& a, const string& b);
 };

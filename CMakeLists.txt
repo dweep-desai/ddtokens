@@ -20,16 +20,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include_directories(include)
 
 # Full pipeline (backward compat)
-add_executable(tokenizer src/main.cpp src/tokenizer.cpp src/tokenizer_heap.cpp)
+add_executable(tokenizer src/main.cpp src/tokenizer_base.cpp src/tokenizer_naive.cpp)
 
 # Phase 1: build word frequency hashmap from text files
-add_executable(build_freqs src/build_freqs.cpp src/tokenizer.cpp src/tokenizer_heap.cpp)
+add_executable(build_freqs src/build_freqs.cpp src/tokenizer_base.cpp)
 
 # Phase 2: load hashmap, run BPE training, produce vocabulary
-add_executable(train_bpe src/train_bpe.cpp src/tokenizer.cpp src/tokenizer_heap.cpp)
+add_executable(train_bpe src/train_bpe.cpp src/tokenizer_base.cpp src/tokenizer_naive.cpp)
 
 # Phase 2 Fast: heap-based optimization for BPE training
-add_executable(train_bpe_heap src/train_bpe_heap.cpp src/tokenizer.cpp src/tokenizer_heap.cpp)
+add_executable(train_bpe_heap src/train_bpe_heap.cpp src/tokenizer_base.cpp src/tokenizer_heap.cpp)
 
 # Utility: prune hashmap to save memory
-add_executable(prune_hashmap src/prune_hashmap.cpp src/tokenizer.cpp src/tokenizer_heap.cpp)
+add_executable(prune_hashmap src/prune_hashmap.cpp src/tokenizer_base.cpp)

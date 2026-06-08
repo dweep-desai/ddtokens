@@ -10,7 +10,7 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_heap.h"
 
 using namespace std;
 
@@ -27,13 +27,13 @@ int main(int argc, char* argv[]) {
     size_t num_merges = std::stoull(argv[1]);
     string freqs_path = argv[2];
 
-    BPETokenizer tokenizer;
+    BPETokenizerHeap tokenizer;
     
     // Phase 1: Load pruned hashmap
     tokenizer.load_word_freqs(freqs_path);
     
     // Phase 2: Train BPE rules using fast algorithm
-    tokenizer.train_heap(num_merges);
+    tokenizer.train(num_merges);
     
     // Phase 3: Save to disk
     tokenizer.save("merges.ddtok", "vocab.ddtok");

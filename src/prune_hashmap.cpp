@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_base.h"
 
 using namespace std;
 
@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     string output_path = argv[2];
     size_t min_freq = stoull(argv[3]);
 
-    BPETokenizer tokenizer;
+    BPETokenizerBase tokenizer;
     cout << "Loading hashmap from " << input_path << "...\n";
     tokenizer.load_word_freqs(input_path);
     

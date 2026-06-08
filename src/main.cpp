@@ -29,7 +29,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_naive.h"
 
 using namespace std;
 
@@ -45,9 +45,9 @@ int main(int argc, char* argv[]) {
 
     size_t num_merges = stoull(argv[1]);
 
-    BPETokenizer tokenizer;
+    BPETokenizerNaive tokenizer;
 
-    // First pass — stream each file once to build word frequency table.
+    // Stream the data directly into the tokenizer to build word frequency table.
     // After this loop, the raw text files are never touched again.
     for (int i = 2; i < argc; i++) {
         cout << "Reading: " << argv[i] << "\n";

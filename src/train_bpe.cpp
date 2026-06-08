@@ -21,31 +21,31 @@
  *
  * Usage:
  *   ./train_bpe <num_merges> <word_freqs.ddfreq>
- *   ./train_bpe 100000 word_freqs.ddfreq
+ *   ./train_bpe 29744 word_freqs.ddfreq
  */
 
-#include <iostream>
+#include <string>
 #include <cstdlib>
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_naive.h"
 
 using namespace std;
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {
         cerr << "Usage: train_bpe <num_merges> <word_freqs.ddfreq>\n"
-             << "  num_merges: how many BPE merges to learn (e.g. 100000)\n"
+             << "  num_merges: how many BPE merges to learn (e.g. 29744 for 30k vocab)\n"
              << "  word_freqs.ddfreq: binary frequency map from build_freqs\n\n"
              << "Example:\n"
-             << "  ./train_bpe 100000 word_freqs.ddfreq\n";
+             << "  ./train_bpe 29744 word_freqs.ddfreq\n";
         return 1;
     }
 
     size_t num_merges = stoull(argv[1]);
     string freqs_path = argv[2];
 
-    BPETokenizer tokenizer;
+    BPETokenizerNaive tokenizer;
 
-    // Load the pre-built hashmap — no raw text files needed.
+    // Phase 1: Load pruned hashmap — no raw text files needed.
     tokenizer.load_word_freqs(freqs_path);
     tokenizer.print_stats();
 

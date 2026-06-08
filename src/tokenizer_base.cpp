@@ -30,7 +30,7 @@
  *   The tokenizer class is self-contained and testable independently.
  */
 
-#include "../include/tokenizer.h"
+#include "../include/tokenizer_base.h"
 #include <cctype>
 #include <iomanip>
 #include <sstream>
@@ -39,7 +39,7 @@ using namespace std;
 
 // --- First Pass: Streaming Word Frequency Builder ---
 
-void BPETokenizer::build_word_frequencies(istream& input) {
+void BPETokenizerBase::build_word_frequencies(istream& input) {
     string line;
     size_t lines_read = 0;
 
@@ -80,99 +80,7 @@ void BPETokenizer::build_word_frequencies(istream& input) {
          << word_freqs.size() << " unique words\n";
 }
 
-// --- BPE Training (runs entirely in-memory) ---
 
-void BPETokenizer::train(size_t num_merges) {
-    // Initialize word_splits: decompose each word into individual bytes.
-    // This only happens once — subsequent merges mutate these vectors in place.
-    if (word_splits.empty()) {
-        word_splits.reserve(word_freqs.size());
-        for (const auto& [word, freq] : word_freqs) {
-            vector<string> bytes;
-            bytes.reserve(word.size());
-            for (unsigned char c : word) {
-                bytes.emplace_back(1, static_cast<char>(c));
-            }
-            word_splits[word] = std::move(bytes);
-        }
-    }
-
-    cout << "Starting BPE: " << word_freqs.size() << " unique words, "
-         << num_merges << " target merges\n";
-
-    for (size_t step = 0; step < num_merges; step++) {
-        PairCounts pair_counts = count_pairs();
-
-        if (pair_counts.empty()) {
-            cout << "No mergeable pairs remain at step " << step << "\n";
-            break;
-        }
-
-        // Linear scan for max — fine for typical vocab sizes.
-        // A priority queue would help if pair_counts is huge,
-        // but the bottleneck is count_pairs(), not this scan.
-        TokenPair best;
-        size_t best_count = 0;
-        for (const auto& [pair, count] : pair_counts) {
-            if (count > best_count) {
-                best_count = count;
-                best = pair;
-            }
-        }
-
-        merges.push_back(best);
-        apply_merge(best.first, best.second);
-
-        // Log periodically + first merge for sanity check
-        if (step == 0 || (step + 1) % 500 == 0) {
-            cout << "  merge " << (step + 1) << "/" << num_merges
-                 << ": \"" << best.first << "\" + \"" << best.second
-                 << "\" (count=" << best_count << ")\n";
-        }
-    }
-
-    cout << "Training complete. Final vocab size: "
-         << BASE_VOCAB_SIZE + merges.size() << "\n";
-}
-
-PairCounts BPETokenizer::count_pairs() const {
-    PairCounts counts;
-
-    for (const auto& [word, split] : word_splits) {
-        if (split.size() < 2) continue;
-
-        size_t freq = word_freqs.at(word);
-        for (size_t i = 0; i + 1 < split.size(); i++) {
-            counts[{split[i], split[i + 1]}] += freq;
-        }
-    }
-
-    return counts;
-}
-
-void BPETokenizer::apply_merge(const string& a, const string& b) {
-    string merged = a + b;
-
-    for (auto& [word, split] : word_splits) {
-        if (split.size() < 2) continue;
-
-        vector<string> new_split;
-        new_split.reserve(split.size());
-
-        size_t i = 0;
-        while (i < split.size()) {
-            if (i + 1 < split.size() && split[i] == a && split[i + 1] == b) {
-                new_split.push_back(merged);
-                i += 2;
-            } else {
-                new_split.push_back(std::move(split[i]));
-                i++;
-            }
-        }
-
-        split = std::move(new_split);
-    }
-}
 
 // --- Output ---
 
@@ -196,7 +104,7 @@ static string escape_token(const string& token) {
     return oss.str();
 }
 
-void BPETokenizer::save(const string& merges_path, const string& vocab_path) const {
+void BPETokenizerBase::save(const string& merges_path, const string& vocab_path) const {
     // Write merge rules (ordered — order matters for deterministic tokenization)
     {
         ofstream f(merges_path);
@@ -228,7 +136,7 @@ void BPETokenizer::save(const string& merges_path, const string& vocab_path) con
     }
 }
 
-void BPETokenizer::print_stats() const {
+void BPETokenizerBase::print_stats() const {
     cout << "Word frequencies: " << word_freqs.size() << " unique words\n";
     cout << "Merges learned: " << merges.size() << "\n";
     cout << "Current vocab size: " << BASE_VOCAB_SIZE + merges.size() << "\n";
@@ -236,7 +144,7 @@ void BPETokenizer::print_stats() const {
 
 // --- Word Frequency Serialization ---
 
-void BPETokenizer::save_word_freqs(const string& path) const {
+void BPETokenizerBase::save_word_freqs(const string& path) const {
     ofstream f(path, ios::binary);
     if (!f.is_open()) {
         cerr << "Error: could not open " << path << " for writing\n";
@@ -257,7 +165,7 @@ void BPETokenizer::save_word_freqs(const string& path) const {
     cout << "Word frequencies (" << count << " entries) saved to " << path << "\n";
 }
 
-void BPETokenizer::load_word_freqs(const string& path) {
+void BPETokenizerBase::load_word_freqs(const string& path) {
     ifstream f(path, ios::binary);
     if (!f.is_open()) {
         cerr << "Error: could not open " << path << " for reading\n";
@@ -287,7 +195,7 @@ void BPETokenizer::load_word_freqs(const string& path) {
     cout << "Loaded " << word_freqs.size() << " word frequencies from " << path << "\n";
 }
 
-void BPETokenizer::prune_word_freqs(size_t min_freq) {
+void BPETokenizerBase::prune_word_freqs(size_t min_freq) {
     size_t original_size = word_freqs.size();
     for (auto it = word_freqs.begin(); it != word_freqs.end(); ) {
         if (it->second < min_freq) {
