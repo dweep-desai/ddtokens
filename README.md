@@ -80,6 +80,14 @@ Imagine a tiny dataset of 15 words where 5 are `c a b`, 3 are `d a b`, and 7 are
 3. **The Update:** The Reverse Index instantly points us only to the 12 words containing `(c, a)`. We merge `(c, a)` into `ca` for those words. 
 4. **Delta Math:** Because `a` is no longer standing alone, overlapping pairs like `(a, b)` and `(a, d)` are mathematically reduced in frequency, and new pairs like `(ca, b)` and `(ca, d)` are added to the heap. The other 3 words (`d a b`) are entirely ignored, saving massive amounts of compute time!
 
+#### Critical Problems Addressed
+Implementing the $O(N \log N)$ heap approach introduces several edge cases that this codebase explicitly solves:
+- **Stale Entries in the Heap:** Since you cannot efficiently remove pairs mid-heap when their frequencies decrease, the codebase uses **Lazy Deletion**. When a pair is popped, the algorithm verifies its heap frequency against a ground-truth `current_pair_counts` hashmap. If they don't match, it is discarded as stale.
+- **Word Frequency Weighting:** Pair counts are not incremented by `1`. They are strictly weighted by the parent word's frequency in the massive corpus (e.g., `pair_count += word_freq`).
+- **Neighbor Pair Delta Math:** When merging `A` and `B` into `AB`, the left and right neighbor boundaries are dynamically updated. `(X, A)` and `(B, Y)` are decremented, while `(X, AB)` and `(AB, Y)` are incremented and pushed to the heap.
+- **Word Representation:** Words are not stored as strings (which require costly string splits). They are stored as a `std::vector<std::string>` to allow extremely fast $O(L)$ linear array rebuilds when tokens merge.
+- **End-of-Word Tokens:** Instead of appending artificial `</w>` tokens to word boundaries, this algorithm strictly follows the GPT-2 / tiktoken byte-level standard. Whitespace is preserved as a leading byte (`" hello"` vs `"hello"`), acting as a natural boundary.
+
 ### Output
 
 The trained tokenizer produces two files:
