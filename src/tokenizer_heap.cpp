@@ -71,11 +71,16 @@ void BPETokenizerHeap::train(size_t num_merges) {
         if (a.first != b.first) return a.first < b.first;
         return a.second > b.second; // Deterministic tie-breaker
     };
-    priority_queue<HeapItem, vector<HeapItem>, decltype(cmp)> pq(cmp);
-
+    vector<HeapItem> initial_heap;
+    initial_heap.reserve(current_pair_counts.size());
     for (const auto& [p, count] : current_pair_counts) {
-        pq.push({count, p});
+        initial_heap.push_back({count, p});
     }
+    
+    // Pass the vector directly to the priority_queue constructor.
+    // This internally calls std::make_heap in O(P) linear time, which is 
+    // significantly faster than pushing items one-by-one in O(P log P) time.
+    priority_queue<HeapItem, vector<HeapItem>, decltype(cmp)> pq(cmp, std::move(initial_heap));
 
     cout << "Initialization complete. Target merges: " << num_merges << "\n";
 
