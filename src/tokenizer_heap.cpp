@@ -127,6 +127,7 @@ void BPETokenizerHeap::train(size_t num_merges) {
                     if (new_split.size() > 0) {
                         TokenPair prev_pair = {new_split.back(), split[i]};
                         current_pair_counts[prev_pair] -= freq;
+                        pq.push({current_pair_counts[prev_pair], prev_pair});
                         
                         TokenPair new_prev = {new_split.back(), merged};
                         current_pair_counts[new_prev] += freq;
@@ -140,6 +141,7 @@ void BPETokenizerHeap::train(size_t num_merges) {
                     if (i + 2 < split.size()) {
                         TokenPair next_pair = {split[i + 1], split[i + 2]};
                         current_pair_counts[next_pair] -= freq;
+                        pq.push({current_pair_counts[next_pair], next_pair});
                         
                         TokenPair new_next = {merged, split[i + 2]};
                         current_pair_counts[new_next] += freq;
@@ -164,6 +166,9 @@ void BPETokenizerHeap::train(size_t num_merges) {
         // Free memory for the old pair
         pair_locs[best].clear();
         pair_locs[best].shrink_to_fit();
+        
+        // Zero out the best pair so it can never accidentally be popped again
+        current_pair_counts[best] = 0;
 
         // Log every merge
         cout << "  fast merge " << (step + 1) << "/" << num_merges
