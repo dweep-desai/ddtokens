@@ -48,6 +48,7 @@ To prevent unique word inflation and hashmap memory bloat (which can easily exce
 - Repeating characters: Any special character repeated 4 or more times (e.g., long dashes) is collapsed to exactly 3 repetitions and padded with spaces to separate it from surrounding words.
 - Pipe limits: Files with excessive pipe characters (like broken markdown tables) have all but the first two pipes replaced with spaces, preserving the pipe token without creating massive concatenated words.
 - Normalization: Unicode whitespace is normalized to standard ASCII spaces, and multiple spaces are collapsed into one.
+- Frequency Pruning: After building the initial word frequency hashmap, words that appear exactly once across the massive corpus are aggressively pruned. This removes millions of garbage entries (typos, unique hashes, parsing errors) from the long tail of Zipf's law, freeing up over 10GB of RAM for the BPE merge loops without degrading tokenization quality.
 
 ### Training Architecture
 

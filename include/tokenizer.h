@@ -76,6 +76,9 @@ public:
     // Replaces any existing word_freqs data.
     void load_word_freqs(const string& path);
 
+    // Prune words with frequency less than min_freq
+    void prune_word_freqs(size_t min_freq);
+
 private:
     // word -> corpus frequency (survives entire lifetime, never mutated after ingestion)
     unordered_map<string, size_t> word_freqs;

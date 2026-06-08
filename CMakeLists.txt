@@ -27,3 +27,6 @@ add_executable(build_freqs src/build_freqs.cpp src/tokenizer.cpp)
 
 # Phase 2: load hashmap, run BPE training, produce vocabulary
 add_executable(train_bpe src/train_bpe.cpp src/tokenizer.cpp)
+
+# Utility: prune hashmap to save memory
+add_executable(prune_hashmap src/prune_hashmap.cpp src/tokenizer.cpp)

@@ -286,3 +286,16 @@ void BPETokenizer::load_word_freqs(const string& path) {
 
     cout << "Loaded " << word_freqs.size() << " word frequencies from " << path << "\n";
 }
+
+void BPETokenizer::prune_word_freqs(size_t min_freq) {
+    size_t original_size = word_freqs.size();
+    for (auto it = word_freqs.begin(); it != word_freqs.end(); ) {
+        if (it->second < min_freq) {
+            it = word_freqs.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    cout << "Pruned " << (original_size - word_freqs.size()) << " words.\n";
+    cout << "Kept " << word_freqs.size() << " words out of " << original_size << ".\n";
+}
