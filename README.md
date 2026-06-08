@@ -145,4 +145,4 @@ The trained tokenizer produces two files:
 
 These files fully define the tokenizer and can be loaded to encode any arbitrary text into token IDs.
 
-*NOTE* - this is the current strategy and might change as the codebase progresses
+
