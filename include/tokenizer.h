@@ -63,6 +63,9 @@ public:
     // After this, merges + BASE_VOCAB_SIZE = total vocab size.
     void train(size_t num_merges);
 
+    // Optimized $O(N \log N)$ implementation of BPE using priority queue and reverse index
+    void train_heap(size_t num_merges);
+
     // Persist merge rules and final vocabulary to disk.
     void save(const string& merges_path, const string& vocab_path) const;
 

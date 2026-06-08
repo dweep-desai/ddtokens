@@ -64,7 +64,21 @@ Each unique word in the hashmap is decomposed into its individual bytes (the 256
 3. Merges that pair into a new token everywhere it appears
 4. Records the merge rule
 
-This repeats for a target number of merges (e.g., 100,000 merges → 100,256 total vocab size, similar to OpenAI's cl100k_base). The key insight is that human language is highly repetitive — billions of tokens compress down to millions of unique words, which fit comfortably in RAM.
+This repeats for a target number of merges (29,744 merges → 30,000 total vocab size). Since this project only covers English general text (no code or multilingual data), a 30k vocabulary provides an optimal balance between compression efficiency and compute cost — similar to Meta's LLaMA 2 (32k vocab). The key insight is that human language is highly repetitive — billions of tokens compress down to millions of unique words, which fit comfortably in RAM.
+
+### Optimised Approach
+
+I originally started training the BPE merges using a naive approach where the CPU recalculates the frequencies of all adjacent byte pairs by scanning every word in the vocabulary on every single merge step. However, with millions of unique words and 30,000 target merges, I soon realized this was going to take days (over 4 trillion operations!). So, I implemented this new optimised approach using a Priority Queue (Max-Heap) and a Reverse Index.
+
+**How it works:**
+Instead of scanning all words, the algorithm counts pairs exactly once at the beginning and places them into a Max-Heap to instantly find the most frequent pair. A Reverse Index maps every byte pair to the exact IDs of the words that contain it. When a merge happens, the algorithm only updates the specific words flagged by the Reverse Index, taking the time complexity from days down to a few minutes (under 1 billion operations).
+
+**Example in a 15-word space:**
+Imagine a tiny dataset of 15 words where 5 are `c a b`, 3 are `d a b`, and 7 are `c a d`. 
+1. **Initial Scan:** The pair `(a, b)` appears 8 times. `(c, a)` appears 12 times. The Reverse Index remembers which words have which pairs.
+2. **The Merge:** The heap pops the most frequent pair: `(c, a)`. 
+3. **The Update:** The Reverse Index instantly points us only to the 12 words containing `(c, a)`. We merge `(c, a)` into `ca` for those words. 
+4. **Delta Math:** Because `a` is no longer standing alone, overlapping pairs like `(a, b)` and `(a, d)` are mathematically reduced in frequency, and new pairs like `(ca, b)` and `(ca, d)` are added to the heap. The other 3 words (`d a b`) are entirely ignored, saving massive amounts of compute time!
 
 ### Output
 
