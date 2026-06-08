@@ -2,6 +2,21 @@
 
 creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary using an optimised fast heap-based approach (introduced in 2023) to run BPE algorithm training significantly faster (about 100x) than the naive loop-through approach.
 
+avoid the detailed read - check out merges.ddtok and vocab.ddtok to see the generated vocabulary and merging rules
+
+## Table of Contents
+- [Papers](#papers)
+- [Datasets](#datasets)
+- [Strategy](#strategy)
+  - [Data Collection](#data-collection)
+  - [Data Cleaning](#data-cleaning)
+  - [Dataset Cleaning Strategy](#dataset-cleaning-strategy)
+  - [Training Architecture](#training-architecture)
+  - [Optimised Approach](#optimised-approach)
+    - [Critical Problems Addressed](#critical-problems-addressed)
+    - [The "Vanishing Pair" Bug (The Biggest Heap Pitfall)](#the-vanishing-pair-bug-the-biggest-heap-pitfall)
+  - [Output](#output)
+
 ## Papers
 
 
