@@ -1,17 +1,29 @@
 # ddtokens
 
-creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary. (Note : did not include code in dataset due to massive unique word hashmap entries blow up - this project only deals with general text.)
+creating a tokenizer (byte level bpe) and possibly trying to replicate cl100k_base's massive token dictionary using an optimised fast heap-based approach (introduced in 2023) to run BPE algorithm training significantly faster (about 100x) than the naive loop-through approach.
 
 ## Papers
 
-- Neural Machine Translation of Rare Words with Subword Units (2016)
-  - Paper: https://arxiv.org/abs/1508.07909
 
-- Language Models are Unsupervised Multitask Learners (GPT-2)
-  - Paper: https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
+* **Neural Machine Translation of Rare Words with Subword Units (2016)** – Introduced BPE to NLP for subword tokenization, enabling models to handle rare and unseen words without a fixed word-level vocabulary.
 
-- Training Multilingual Pre-trained Language Model with Byte-level Subwords
-  - Paper: https://arxiv.org/abs/2101.09469
+  * Paper: [https://arxiv.org/abs/1508.07909](https://arxiv.org/abs/1508.07909)
+
+* **Language Models are Unsupervised Multitask Learners (GPT-2, 2019)** – Introduced Byte-Level BPE (BBPE), applying BPE directly to UTF-8 bytes instead of characters, eliminating unknown tokens and enabling robust tokenization of arbitrary text.
+
+  * Paper: [https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
+
+* **Training Multilingual Pre-trained Language Model with Byte-level Subwords (2021)** – Demonstrates the effectiveness of Byte-Level BPE for multilingual language models, showing improved vocabulary sharing across languages while maintaining strong downstream performance.
+
+  * Paper: [https://arxiv.org/abs/2101.09469](https://arxiv.org/abs/2101.09469)
+
+* **A Formal Perspective on Byte-Pair Encoding (2023)** – Rather than treating BPE as a heuristic, the paper formalizes it as a combinatorial optimization problem and derives theoretical guarantees for its behavior. Improves runtime complexity from **O(NM)** to **O(N log M)**, where **N** is sequence length and **M** is the number of merge operations.
+
+  * Paper: [https://arxiv.org/pdf/2306.16837](https://arxiv.org/pdf/2306.16837)
+
+
+
+ 
 
 ## Datasets
 
