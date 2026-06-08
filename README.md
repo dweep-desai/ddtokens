@@ -87,6 +87,28 @@ Implementing the $O(N \log N)$ heap approach introduces several edge cases that 
 - **Neighbor Pair Delta Math:** When merging `A` and `B` into `AB`, the left and right neighbor boundaries are dynamically updated. `(X, A)` and `(B, Y)` are decremented, while `(X, AB)` and `(AB, Y)` are incremented and pushed to the heap.
 - **Word Representation:** Words are not stored as strings (which require costly string splits). They are stored as a `std::vector<std::string>` to allow extremely fast $O(L)$ linear array rebuilds when tokens merge.
 - **End-of-Word Tokens:** Instead of appending artificial `</w>` tokens to word boundaries, this algorithm strictly follows the GPT-2 / tiktoken byte-level standard. Whitespace is preserved as a leading byte (`" hello"` vs `"hello"`), acting as a natural boundary.
+- **O(N) Heap Initialization:** The initial Max-Heap is constructed by passing an entire `std::vector` of pairs directly to the `std::priority_queue` constructor. Under the hood, this uses `std::make_heap` to build the structure in pure $O(N)$ linear time, which is strictly over 2x faster than inserting elements one-by-one in $O(N \log N)$ time.
+
+#### The "Vanishing Pair" Bug (The Biggest Heap Pitfall)
+When implementing Lazy Deletion, there is a massive logical trap that initially broke the statistical accuracy of this algorithm.
+
+**What it was doing:**
+When a pair merges (e.g., merging `h` and `e`), it naturally destroys overlapping pairs (like `e` and `r` in the word `h e r e`). Because `(e, r)` is destroyed, its true frequency mathematically decreases. 
+The algorithm correctly identified that the old, higher frequency for `(e, r)` in the priority queue was now "stale". When that stale entry reached the top of the heap, the Lazy Deletion check successfully threw it in the garbage. However, the algorithm **failed to push the new, lower frequency back into the priority queue.** 
+As a result, the pair `(e, r)` completely vanished from the heap and was lost forever, causing major frequency drift and incorrect merge choices later down the line.
+
+**What it should do (The Fix):**
+Every single time a neighbor pair's frequency is decremented due to an overlap destruction, that new lower frequency **must** be explicitly pushed back into the heap.
+
+**Example:**
+Imagine the pair `(e, r)` has a massive frequency of 485 million.
+1. The algorithm merges `(h, e)` into `he`.
+2. In words like `h e r e`, the `e` is consumed, destroying the `(e, r)` pair.
+3. We decrement the true count of `(e, r)` down to 460 million.
+4. The heap still contains the old `(485M, (e, r))` entry.
+5. **The Fix:** We immediately push `(460M, (e, r))` into the heap.
+6. Later, the heap pops the 485M entry. Lazy Deletion sees that 485M != 460M, and throws the 485M entry away.
+7. Eventually, the heap pops the 460M entry. Lazy Deletion sees that 460M == 460M, and successfully merges it!
 
 ### Output
 
