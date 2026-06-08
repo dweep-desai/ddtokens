@@ -160,11 +160,10 @@ void BPETokenizerHeap::train(size_t num_merges) {
         pair_locs[best].clear();
         pair_locs[best].shrink_to_fit();
 
-        if (step == 0 || (step + 1) % 500 == 0) {
-            cout << "  fast merge " << (step + 1) << "/" << num_merges
-                 << ": \"" << best.first << "\" + \"" << best.second
-                 << "\" (count=" << best_count << ")\n";
-        }
+        // Log every merge
+        cout << "  fast merge " << (step + 1) << "/" << num_merges
+             << ": \"" << best.first << "\" + \"" << best.second
+             << "\" (count=" << best_count << ")\n";
     }
 
     auto end_time = chrono::high_resolution_clock::now();
