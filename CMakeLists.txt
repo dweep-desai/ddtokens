@@ -33,3 +33,6 @@ add_executable(train_bpe_heap src/train_bpe_heap.cpp src/tokenizer_base.cpp src/
 
 # Utility: prune hashmap to save memory
 add_executable(prune_hashmap src/prune_hashmap.cpp src/tokenizer_base.cpp)
+
+# Utility: tokenize text using vocab and merges
+add_executable(tokenize_my_text src/tokenize_my_text.cpp)
