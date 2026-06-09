@@ -69,12 +69,25 @@ int main() {
     cout << "Loaded " << vocab.size() << " vocab entries." << endl;
 
     // 3. Interactive prompt
-    cout << "\nEnter text to tokenize (or 'quit' to exit):" << endl;
+    cout << "\nEnter text to tokenize (Type 'END' on a new line to process, or 'quit' to exit):" << endl;
     while (true) {
         cout << "> ";
         string text;
-        if (!getline(cin, text)) break;
-        if (text == "quit") break;
+        string line;
+        bool first_line = true;
+        while (getline(cin, line)) {
+            if (first_line && line == "quit") return 0;
+            if (line == "END") break;
+            
+            if (!first_line) {
+                text += "\n";
+            }
+            text += line;
+            first_line = false;
+        }
+        
+        if (cin.eof() && text.empty()) break;
+        if (text.empty()) continue;
 
         // Split text into words
         vector<string> words;
