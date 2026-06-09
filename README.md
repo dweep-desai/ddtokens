@@ -3,7 +3,7 @@
 A custom tokenizer (byte level BPE) trained by me to try to replicate LLAMA 2's massive token vocabulary using an optimised fast heap-based approach (introduced in 2023) to run BPE algorithm training significantly faster (about 100x) than the naive loop-through approach.
 
 (tl;dr: avoid the detailed read if you want—just check out `merges.ddtok` and `vocab.ddtok` to see the generated vocab and merge rules. to see the tokenizer actually working, just run `./build/tokenize_my_text`!)
-
+Watch it live in action and compare with other popular tokenizers at the ddtokens playground - https://dweep-desai.github.io/visual-playground-for-ddtokens/
 ## Table of Contents
 - [Papers](#papers)
 - [Datasets](#datasets)
