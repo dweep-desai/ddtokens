@@ -135,6 +135,14 @@ imagine the pair `(e, r)` has a massive frequency of 485 million.
 6. later, the heap pops the 485M entry. Lazy Deletion sees that 485M != 460M, and trashes the 485M entry.
 7. eventually, the heap pops the 460M entry. Lazy Deletion sees that 460M == 460M, and successfully merges it!
 
+### Training Screenshots
+
+Here are screenshots of the BPE training process using the optimized heap-based implementation:
+
+![Training Screenshot 1](assets/ss_2.png)
+
+![Training Screenshot 2](assets/ss_1.png)
+
 ### Output
 
 the trained tokenizer spits out two files:
